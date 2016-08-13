@@ -55,7 +55,11 @@ class MasterWebUI(
   }
 
   def addProxyTargets(id: String, target: String): Unit = {
-    val handler = createProxyHandler("/proxy/" + id, target)
+    var endTarget: String = target
+    if (endTarget.endsWith("/")) {
+      endTarget = endTarget.substring(0, endTarget.length()-1)
+    }
+    val handler = createProxyHandler("/proxy/" + id, endTarget)
     attachHandler(handler)
     proxyHandlers(id) = handler
   }
