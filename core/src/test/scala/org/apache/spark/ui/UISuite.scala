@@ -18,10 +18,13 @@
 package org.apache.spark.ui
 
 import java.net.{BindException, ServerSocket}
+import java.net.URI
+import javax.servlet.http.HttpServletRequest
 
 import scala.io.Source
 
 import org.eclipse.jetty.servlet.ServletContextHandler
+import org.mockito.Mockito.{mock, when}
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.time.SpanSugar._
 
@@ -202,6 +205,28 @@ class UISuite extends SparkFunSuite {
     assert(rewrittenURI.toString().equals("http://localhost:8081"))
     rewrittenURI = JettyUtils.createProxyURI(prefix, target, "/proxy/worker-noid/json", null)
     assert(rewrittenURI == null)
+  }
+
+  test("verify rewriting location header for reverse proxy") {
+    val clientRequest = mock(classOf[HttpServletRequest])
+    var headerValue = "http://localhost:4040/jobs"
+    val prefix = "/proxy/worker-id"
+    val targetUri = URI.create("http://localhost:4040")
+    when(clientRequest.getScheme()).thenReturn("http")
+    when(clientRequest.getHeader("host")).thenReturn("localhost:8080")
+    var newHeader = JettyUtils.createProxyLocationHeader(
+                                  prefix,
+                                  headerValue,
+                                  clientRequest,
+                                  targetUri)
+    assert(newHeader.toString().equals("http://localhost:8080/proxy/worker-id/jobs"))
+    headerValue = "http://localhost:4041/jobs"
+    newHeader = JettyUtils.createProxyLocationHeader(
+                                  prefix,
+                                  headerValue,
+                                  clientRequest,
+                                  targetUri)
+    assert(newHeader == null)
   }
 
   def stopServer(info: ServerInfo): Unit = {
